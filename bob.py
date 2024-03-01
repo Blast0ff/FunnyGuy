@@ -1,6 +1,7 @@
 import requests
 import socket
 import psutil 
+import subprocess
 
 def get_ip_and_network():
     hostname = socket.gethostname()
@@ -15,6 +16,13 @@ def get_ip_and_network():
 
     return ip_address, "Network not found"
 
+def get_network_name_windows():
+    output = subprocess.check_output("netsh wlan show interface").decode()
+    for line in output.splitlines():
+        if "SSID" in line:
+            return line.split(":")[1].strip()
+    return "Network name not found"
+
 def send_to_discord(webhook_url, message):
     data = {"content": message}
     response = requests.post(webhook_url, json=data)
@@ -25,5 +33,6 @@ if __name__ == "__main__":
     webhook_url = "https://discord.com/api/webhooks/1209489160495304764/pSNsnAH07u8mAM3Ra9-oZTqhSZ5ysg_c5wLWAeepqdA-OPTEsxcQYH-Po1IIXHuiXQI2"  # Replace with your actual webhook URL
 
     ip_address, network = get_ip_and_network()
-    message = f"Server is open! IP: {ip_address}, Network: {network}"
+    network_name = get_network_name_windows()  # Get network name (SSID)
+    message = f"Server is open! IP: {ip_address}, Network: {network_name}"
     send_to_discord(webhook_url, message)
